@@ -386,24 +386,40 @@ class _MapScreenState extends State<MapScreen> {
     mapController.setMapStyle(mapStyleJson);
   }
 
-  void _handleLongPress(LatLng point) {
-  setState(() {
-    customPinLocation = point;
+  void _handleLongPress(LatLng point) async {
+    try {
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        point.latitude,
+        point.longitude,
+      );
 
-    // Create a custom marker
-    customPinMarker = Marker(
-      markerId: MarkerId('customPin'),
-      position: customPinLocation!,
-      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure), // You can customize the marker icon here
-      infoWindow: InfoWindow(title: 'Custom Pin'),
-    );
+      if (placemarks.isNotEmpty) {
+        Placemark placemark = placemarks.first;
 
-    // Clear existing markers and add the custom marker
-    markers.clear();
-    markers.add(customPinMarker!);
-  });
-}
+        // Construct a detailed address
+        String address =
+            '${placemark.name ?? ''}, ${placemark.thoroughfare ?? ''}, ${placemark.subThoroughfare ?? ''}, ${placemark.locality ?? ''}, ${placemark.subLocality ?? ''}, ${placemark.administrativeArea ?? ''}, ${placemark.postalCode ?? ''}, ${placemark.country ?? ''}';
 
+        // Create a custom marker with the detailed address as the title
+        customPinMarker = Marker(
+          markerId: const MarkerId('customPin'),
+          position: point,
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+          infoWindow: InfoWindow(title: address),
+        );
+
+        // Clear existing markers and add the custom marker
+        markers.clear();
+        markers.add(customPinMarker!);
+
+        // Update the state to trigger a rebuild
+        setState(() {});
+      }
+    } catch (e) {
+      print('Error fetching address: $e');
+    }
+  }
 
   void _getNearbyRestaurants() async {
     try {
