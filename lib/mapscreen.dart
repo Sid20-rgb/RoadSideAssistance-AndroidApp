@@ -387,10 +387,23 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _handleLongPress(LatLng point) {
-    setState(() {
-      customPinLocation = point;
-    });
-  }
+  setState(() {
+    customPinLocation = point;
+
+    // Create a custom marker
+    customPinMarker = Marker(
+      markerId: MarkerId('customPin'),
+      position: customPinLocation!,
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure), // You can customize the marker icon here
+      infoWindow: InfoWindow(title: 'Custom Pin'),
+    );
+
+    // Clear existing markers and add the custom marker
+    markers.clear();
+    markers.add(customPinMarker!);
+  });
+}
+
 
   void _getNearbyRestaurants() async {
     try {
