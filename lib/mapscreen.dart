@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:google_maps_webservice/places.dart' as places;
 import 'package:location/location.dart' as location;
 import 'package:sliding_up_panel/sliding_up_panel.dart';
 
@@ -18,13 +17,12 @@ class _MapScreenState extends State<MapScreen> {
   late location.Location userLocation;
   late String currentUserLocation;
   location.LocationData? currentLocation;
-  final places.GoogleMapsPlaces _placesApi = places.GoogleMapsPlaces(
-      apiKey: 'YOUR_API_KEY'); // Replace with your API key
-
+  Set<Polyline> polylines = {};
   Set<Marker> markers = <Marker>{};
   final panelController = PanelController();
   LatLng? customPinLocation;
   Marker? customPinMarker;
+  bool locationFetched = false;
 
   @override
   void initState() {
@@ -32,28 +30,35 @@ class _MapScreenState extends State<MapScreen> {
     userLocation = location.Location();
     currentUserLocation = '';
     _getLocation();
+    // _init();
   }
+
+  // Future<void> _init() async {
+  //   await _getLocation();
+  //   setState(() {
+  //     // Set state variables or perform any other necessary actions
+  //   });
+  // }
 
   Future<String?> _getLocation() async {
     try {
-      currentLocation = await userLocation.getLocation();
+      if (!locationFetched) {
+        currentLocation = await userLocation.getLocation();
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+          currentLocation!.latitude!,
+          currentLocation!.longitude!,
+        );
 
-      print(
-          'Latitude: ${currentLocation?.latitude}, Longitude: ${currentLocation?.longitude}');
+        if (placemarks.isNotEmpty) {
+          String currentAddress = placemarks.first.name ?? 'Unknown Address';
 
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-        currentLocation!.latitude!,
-        currentLocation!.longitude!,
-      );
+          setState(() {
+            currentUserLocation = currentAddress;
+          });
 
-      if (placemarks.isNotEmpty) {
-        String currentAddress = placemarks.first.name ?? 'Unknown Address';
-
-        setState(() {
-          currentUserLocation = currentAddress;
-        });
-
-        return currentAddress;
+          locationFetched =
+              true; // Set the flag to true once location is fetched
+        }
       }
 
       mapController.animateCamera(
@@ -101,6 +106,7 @@ class _MapScreenState extends State<MapScreen> {
               myLocationButtonEnabled: true,
               mapType: MapType.normal,
               markers: markers,
+              polylines: polylines,
               // Handle long press to set the custom pin location
               onLongPress: (LatLng point) {
                 _handleLongPress(point);
@@ -166,7 +172,15 @@ class _MapScreenState extends State<MapScreen> {
                   children: [
                     _buildLocationTextField(),
                     const SizedBox(height: 20.0),
-                    _buildGreenButton('Start Smart Routing', () {}),
+                    _buildGreenButton('Start Smart Routing', () {
+                      if (currentLocation != null &&
+                          customPinLocation != null) {
+                        _startSmartRouting();
+                      } else {
+                        print(
+                            'Error: Custom pin location or current location is null');
+                      }
+                    }),
                     const SizedBox(height: 20.0),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -179,7 +193,7 @@ class _MapScreenState extends State<MapScreen> {
                         _buildSquareButton(
                           '      Find\nRestaurant',
                           Icons.restaurant,
-                          () => _getNearbyRestaurants(),
+                          () {},
                         ),
                         _buildSquareButton(
                           '   Find\nMedical',
@@ -253,10 +267,12 @@ class _MapScreenState extends State<MapScreen> {
           return const CircularProgressIndicator();
         } else if (snapshot.hasError) {
           return Text('Error fetching location: ${snapshot.error}');
-        } else if (snapshot.hasData && snapshot.data != null) {
-          return Text('Current Location: ${snapshot.data}');
         } else {
           String currentUserLocation = snapshot.data ?? 'Unknown Address';
+
+          String destinationText = customPinMarker != null
+              ? ' ${customPinMarker!.infoWindow.title}'
+              : 'Enter destination...';
 
           return Column(
             children: [
@@ -304,8 +320,8 @@ class _MapScreenState extends State<MapScreen> {
               ),
               const SizedBox(height: 20.0),
               Container(
-                child: const Padding(
-                  padding: EdgeInsets.fromLTRB(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
                     12.0,
                     0.0,
                     12.0,
@@ -313,28 +329,28 @@ class _MapScreenState extends State<MapScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.location_on,
                         color: Colors.white,
                       ),
-                      SizedBox(width: 8.0),
+                      const SizedBox(width: 8.0),
                       Expanded(
                         child: TextField(
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 16.0,
                             color: Colors.white,
                           ),
                           decoration: InputDecoration(
                             contentPadding: EdgeInsets.zero,
-                            hintText: 'Enter destination...',
-                            hintStyle: TextStyle(
+                            hintText: destinationText,
+                            hintStyle: const TextStyle(
                               fontSize: 16.0,
                               color: Colors.white,
                             ),
-                            enabledBorder: UnderlineInputBorder(
+                            enabledBorder: const UnderlineInputBorder(
                               borderSide: BorderSide(color: Colors.white),
                             ),
-                            focusedBorder: UnderlineInputBorder(
+                            focusedBorder: const UnderlineInputBorder(
                               borderSide: BorderSide(color: Colors.white),
                             ),
                           ),
@@ -392,6 +408,7 @@ class _MapScreenState extends State<MapScreen> {
         point.latitude,
         point.longitude,
       );
+      customPinLocation = point;
 
       if (placemarks.isNotEmpty) {
         Placemark placemark = placemarks.first;
@@ -421,49 +438,29 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  void _getNearbyRestaurants() async {
-    try {
-      if (currentLocation == null) {
-        print('Error: Current location is null');
-        return;
-      }
-
-      markers.clear();
-
-      // Fetch nearby restaurants using Google Places API
-      places.PlacesSearchResponse response =
-          await _placesApi.searchNearbyWithRadius(
-        places.Location(
-          lat: customPinLocation?.latitude ?? currentLocation!.latitude!,
-          lng: customPinLocation?.longitude ?? currentLocation!.longitude!,
-        ),
-        2000,
-        type: 'restaurant',
-      );
-
-      for (places.PlacesSearchResult result in response.results) {
-        double lat = result.geometry!.location.lat;
-        double lng = result.geometry!.location.lng;
-        String name = result.name ?? '';
-
-        Marker marker = Marker(
-          markerId: MarkerId(name),
-          position: LatLng(lat, lng),
-          infoWindow: InfoWindow(title: name),
-        );
-
-        markers.add(marker);
-      }
-
-      if (markers.isNotEmpty) {
-        mapController.animateCamera(
-          CameraUpdate.newLatLng(markers.first.position),
-        );
-      }
-
-      setState(() {});
-    } catch (e) {
-      print('Error fetching nearby restaurants: $e');
+  void _startSmartRouting() {
+    if (customPinLocation == null || currentLocation == null) {
+      print('Error: Custom pin location or current location is null');
+      return;
     }
+
+    // Create a Polyline from current location to the custom pin location
+    Polyline newPolyline = Polyline(
+      polylineId: const PolylineId('route'),
+      color: Colors.blue,
+      points: [currentLocation!.toLatLng(), customPinLocation!],
+      width: 5,
+    );
+
+    // Update the state to trigger a rebuild
+    setState(() {
+      polylines = {newPolyline};
+    });
+  }
+}
+
+extension LocationDataExtension on location.LocationData {
+  LatLng toLatLng() {
+    return LatLng(latitude!, longitude!);
   }
 }
