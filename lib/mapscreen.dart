@@ -4,6 +4,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart' as location;
 import 'package:sliding_up_panel/sliding_up_panel.dart';
+import 'package:test_try/drawer.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -14,6 +15,8 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   late GoogleMapController mapController;
+  final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
+
   late location.Location userLocation;
   late String currentUserLocation;
   location.LocationData? currentLocation;
@@ -81,6 +84,8 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: scaffoldKey,
+      drawer: CustomDrawer(onItem1Tap: () {}, onItem2Tap: () {}, onItem3Tap: () {}),
       body: SlidingUpPanel(
         minHeight: 100,
         maxHeight: 400,
@@ -140,8 +145,32 @@ class _MapScreenState extends State<MapScreen> {
           ],
         ),
       ),
+      floatingActionButton: Align(
+        alignment: Alignment.topLeft,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 50, horizontal: 20),
+          child: FloatingActionButton(
+            onPressed: () {
+              // Open the drawer when the button is pressed
+              scaffoldKey.currentState?.openDrawer();
+            },
+            backgroundColor:
+                Colors.transparent, // Set background color to transparent
+            elevation: 0, // Remove shadow
+            child: const Icon(
+              Icons.menu,
+              color: Colors.white,
+              size: 30,
+            ), // Set the icon color to white
+          ),
+        ),
+      ),
     );
   }
+
+  // Widget _buildDrawer() {
+
+  // }
 
   Widget _buildPanel() {
     return ClipRRect(
