@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:test_try/widgets/menucustom.dart';
 
 class CardsPage extends StatelessWidget {
   final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
@@ -11,12 +10,12 @@ class CardsPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Cards Page'),
       ),
-      floatingActionButton: CustomFabButton(
-        onPressed: () {
-          scaffoldKey.currentState?.openDrawer();
-        },
-        scaffoldKey: scaffoldKey, // Add this line
-      ),
+      // floatingActionButton: CustomFabButton(
+      //   onPressed: () {
+      //     scaffoldKey.currentState?.openDrawer();
+      //   },
+      //   scaffoldKey: scaffoldKey, // Add this line
+      // ),
       body: ListView(
         children: const [
           Card(

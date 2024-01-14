@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart' show ByteData, Uint8List, rootBundle;
 import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart' as location;
@@ -26,12 +26,14 @@ class _MapScreenState extends State<MapScreen> {
   LatLng? customPinLocation;
   Marker? customPinMarker;
   bool locationFetched = false;
+  Marker? carMarker;
 
   @override
   void initState() {
     super.initState();
     userLocation = location.Location();
     currentUserLocation = '';
+    _loadCarImage();
     _getLocation();
     // _init();
   }
@@ -42,6 +44,29 @@ class _MapScreenState extends State<MapScreen> {
   //     // Set state variables or perform any other necessary actions
   //   });
   // }
+
+  // Method to load the car image from assets
+  Future<void> _loadCarImage({double width = 50, double height = 50}) async {
+    final ByteData data = await rootBundle.load('assets/images/car.png',);
+    final Uint8List bytes = data.buffer.asUint8List();
+  
+    // Create a BitmapDescriptor from the loaded image
+    final BitmapDescriptor carIcon = BitmapDescriptor.fromBytes(bytes);
+
+    // Check if the current location is available
+    if (currentLocation != null) {
+      // Use the user's current location as the initial position
+      carMarker = Marker(
+        markerId: const MarkerId('carMarker'),
+        position: currentLocation!.toLatLng(),
+        icon: carIcon,
+        anchor: const Offset(0.5, 0.5), // Center the image on the marker
+      );
+
+      // Set the initial car marker on the map
+      markers.add(carMarker!);
+    }
+  }
 
   Future<String?> _getLocation() async {
     try {
@@ -57,6 +82,10 @@ class _MapScreenState extends State<MapScreen> {
 
           setState(() {
             currentUserLocation = currentAddress;
+            _updateCarMarker(); // Call the method to update the car marker position
+            _loadCarImage(); // Add this line to load the car image at the correct location
+            locationFetched =
+                true; // Set the flag to true once location is fetched
           });
 
           locationFetched =
@@ -85,7 +114,8 @@ class _MapScreenState extends State<MapScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       key: scaffoldKey,
-      drawer: CustomDrawer(onItem1Tap: () {}, onItem2Tap: () {}, onItem3Tap: () {}),
+      drawer:
+          CustomDrawer(onItem1Tap: () {}, onItem2Tap: () {}, onItem3Tap: () {}),
       body: SlidingUpPanel(
         minHeight: 100,
         maxHeight: 400,
@@ -452,11 +482,12 @@ class _MapScreenState extends State<MapScreen> {
           position: point,
           icon:
               BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-          infoWindow: InfoWindow(title: address),
+          infoWindow: InfoWindow(title: address, snippet: 'No additional info'),
         );
 
         // Clear existing markers and add the custom marker
         markers.clear();
+        markers.add(carMarker!); // Add back the car marker
         markers.add(customPinMarker!);
 
         // Update the state to trigger a rebuild
@@ -466,6 +497,25 @@ class _MapScreenState extends State<MapScreen> {
       print('Error fetching address: $e');
     }
   }
+
+  // Method to update the car marker position
+  void _updateCarMarker() {
+    if (carMarker != null && currentLocation != null) {
+      // Update the car marker position with the current location
+      carMarker =
+          carMarker!.copyWith(positionParam: currentLocation!.toLatLng());
+
+      // Update the state to trigger a rebuild
+      setState(() {
+        markers.removeWhere((marker) => marker.markerId.value == 'carMarker');
+        markers.add(carMarker!);
+      });
+    }
+  }
+
+  // ...
+
+  // Inside _getLocation() method, after setting currentUserLocation
 
   void _startSmartRouting() {
     if (customPinLocation == null || currentLocation == null) {
