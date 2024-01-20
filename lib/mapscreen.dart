@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show ByteData, Uint8List, rootBundle;
+import 'package:flutter/services.dart'
+    show ByteData, Clipboard, ClipboardData, Uint8List, rootBundle;
 import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart' as location;
@@ -16,7 +17,7 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen> {
   late GoogleMapController mapController;
   final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
-
+  final GlobalKey<FormState> formKey = GlobalKey<FormState>();
   late location.Location userLocation;
   late String currentUserLocation;
   location.LocationData? currentLocation;
@@ -47,9 +48,11 @@ class _MapScreenState extends State<MapScreen> {
 
   // Method to load the car image from assets
   Future<void> _loadCarImage({double width = 50, double height = 50}) async {
-    final ByteData data = await rootBundle.load('assets/images/car.png',);
+    final ByteData data = await rootBundle.load(
+      'assets/images/car.png',
+    );
     final Uint8List bytes = data.buffer.asUint8List();
-  
+
     // Create a BitmapDescriptor from the loaded image
     final BitmapDescriptor carIcon = BitmapDescriptor.fromBytes(bytes);
 
@@ -219,10 +222,10 @@ class _MapScreenState extends State<MapScreen> {
             const Text(
               'Current Location',
               style: TextStyle(
-                fontSize: 24.0,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+                  fontSize: 24.0,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  fontFamily: 'Poppins'),
             ),
             const SizedBox(height: 20.0),
             Expanded(
@@ -306,6 +309,7 @@ class _MapScreenState extends State<MapScreen> {
                     style: const TextStyle(
                       fontSize: 14.0,
                       fontWeight: FontWeight.bold,
+                      fontFamily: 'Poppins',
                       color: Colors.white,
                     ),
                   ),
@@ -354,6 +358,7 @@ class _MapScreenState extends State<MapScreen> {
                         child: TextField(
                           style: const TextStyle(
                             fontSize: 16.0,
+                            fontFamily: 'Poppins',
                             color: Colors.white,
                           ),
                           decoration: InputDecoration(
@@ -361,6 +366,7 @@ class _MapScreenState extends State<MapScreen> {
                             hintText: currentUserLocation,
                             hintStyle: const TextStyle(
                               fontSize: 16.0,
+                              fontFamily: 'Poppins',
                               color: Colors.white,
                             ),
                             enabledBorder: const UnderlineInputBorder(
@@ -396,14 +402,15 @@ class _MapScreenState extends State<MapScreen> {
                       Expanded(
                         child: TextField(
                           style: const TextStyle(
-                            fontSize: 16.0,
-                            color: Colors.white,
-                          ),
+                              fontSize: 16.0,
+                              color: Colors.white,
+                              fontFamily: 'Poppins'),
                           decoration: InputDecoration(
                             contentPadding: EdgeInsets.zero,
                             hintText: destinationText,
                             hintStyle: const TextStyle(
                               fontSize: 16.0,
+                              fontFamily: 'Poppins',
                               color: Colors.white,
                             ),
                             enabledBorder: const UnderlineInputBorder(
@@ -447,6 +454,7 @@ class _MapScreenState extends State<MapScreen> {
               style: const TextStyle(
                 fontSize: 16.0,
                 fontWeight: FontWeight.bold,
+                fontFamily: 'Poppins',
                 color: Colors.white,
               ),
             ),
@@ -467,16 +475,69 @@ class _MapScreenState extends State<MapScreen> {
         point.latitude,
         point.longitude,
       );
-      customPinLocation = point;
 
       if (placemarks.isNotEmpty) {
         Placemark placemark = placemarks.first;
 
-        // Construct a detailed address
         String address =
             '${placemark.name ?? ''}, ${placemark.thoroughfare ?? ''}, ${placemark.subThoroughfare ?? ''}, ${placemark.locality ?? ''}, ${placemark.subLocality ?? ''}, ${placemark.administrativeArea ?? ''}, ${placemark.postalCode ?? ''}, ${placemark.country ?? ''}';
 
-        // Create a custom marker with the detailed address as the title
+        // Show a bottom sheet with user's current location details
+        showModalBottomSheet(
+          context: context,
+          builder: (BuildContext context) {
+            return Container(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Latitude: ${point.latitude}',
+                    style:
+                        const TextStyle(fontSize: 16.0, fontFamily: 'Poppins'),
+                  ),
+                  Text(
+                    'Longitude: ${point.longitude}',
+                    style:
+                        const TextStyle(fontSize: 16.0, fontFamily: 'Poppins'),
+                  ),
+                  const SizedBox(height: 16.0),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.copy),
+                        onPressed: () {
+                          // Implement copy functionality here
+                          Clipboard.setData(
+                            ClipboardData(
+                                text: '${point.latitude}, ${point.longitude}'),
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Copied to clipboard'),
+                            ),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.share),
+                        onPressed: () {
+                          // Implement share functionality here
+                          // You can use a share plugin or any other method
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+
+        customPinLocation = point;
+
         customPinMarker = Marker(
           markerId: const MarkerId('customPin'),
           position: point,
@@ -485,12 +546,10 @@ class _MapScreenState extends State<MapScreen> {
           infoWindow: InfoWindow(title: address, snippet: 'No additional info'),
         );
 
-        // Clear existing markers and add the custom marker
         markers.clear();
-        markers.add(carMarker!); // Add back the car marker
+        markers.add(carMarker!);
         markers.add(customPinMarker!);
 
-        // Update the state to trigger a rebuild
         setState(() {});
       }
     } catch (e) {

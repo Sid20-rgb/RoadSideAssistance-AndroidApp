@@ -1,5 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:test_try/widgets/custominfo.dart';
+import 'package:test_try/analysisscreen.dart';
+import 'package:test_try/cars.dart';
+import 'package:test_try/signin.dart';
 
 class CustomDrawer extends StatelessWidget {
   final VoidCallback onItem1Tap;
@@ -40,9 +43,9 @@ class CustomDrawer extends StatelessWidget {
                   Text(
                     'Sid-rgb', // Replace with the user's name
                     style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 25,
-                    ),
+                        color: Colors.white,
+                        fontSize: 25,
+                        fontFamily: 'Poppins'),
                   ),
                 ],
               ),
@@ -50,7 +53,7 @@ class CustomDrawer extends StatelessWidget {
                 padding: EdgeInsets.symmetric(vertical: 0, horizontal: 80),
                 child: Text(
                   '9838383838', // Replace with the user's email
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(color: Colors.white, fontFamily: 'Poppins'),
                 ),
               ),
               decoration: BoxDecoration(
@@ -58,40 +61,115 @@ class CustomDrawer extends StatelessWidget {
               ),
             ),
             ListTile(
-              title: const Text(
-                'Item 1',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                ),
+              title: const Row(
+                children: [
+                  Icon(
+                    Icons.home,
+                    color: Colors.white,
+                  ),
+                  SizedBox(
+                    width: 20,
+                  ),
+                  Text(
+                    'Home',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontFamily: 'Poppins'),
+                  ),
+                ],
               ),
               onTap: () {
                 Navigator.pop(context); // Close the Drawer
               },
             ),
             ListTile(
-              title: const Text(
-                'Item 2',
-                style: TextStyle(color: Colors.white, fontSize: 20),
+              title: const Row(
+                children: [
+                  Icon(
+                    Icons.analytics_rounded,
+                    color: Colors.white,
+                  ),
+                  SizedBox(
+                    width: 20,
+                  ),
+                  Text(
+                    'Road Analysis',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontFamily: 'Poppins'),
+                  ),
+                ],
               ),
               onTap: () {
                 // Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => CardsPage()),
+                  MaterialPageRoute(builder: (context) => const AnalysisPage()),
                 );
               },
             ),
             ListTile(
-              title: const Text(
-                'Item 3',
-                style: TextStyle(color: Colors.white, fontSize: 20),
+              title: const Row(
+                children: [
+                  Icon(
+                    Icons.storage,
+                    color: Colors.white,
+                  ),
+                  SizedBox(
+                    width: 20,
+                  ),
+                  Text(
+                    'Item 3',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontFamily: 'Poppins'),
+                  ),
+                ],
               ),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CarPage()),
+                );
               },
             ),
-            // Add more ListTiles as needed
+            Expanded(
+              child: Align(
+                alignment: FractionalOffset.bottomCenter,
+                child: ListTile(
+                  title: const Row(
+                    children: [
+                      Icon(
+                        Icons.exit_to_app, // Logout icon
+                        color: Colors.white,
+                      ),
+                      SizedBox(
+                        width: 20,
+                      ),
+                      Text(
+                        'Logout',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                    ],
+                  ),
+                  onTap: () {
+                    FirebaseAuth.instance.signOut();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const SignInScreen()),
+                    );
+                  },
+                ),
+              ),
+            ),
           ],
         ),
       ),
