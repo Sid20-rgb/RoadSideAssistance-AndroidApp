@@ -55,6 +55,8 @@ dependencies:
   csv: ^5.1.1
   dropdown_search: ^5.0.6
   flutter_typeahead: ^5.0.2
+  tflite_flutter: ^0.10.4
+  image: ^4.1.4
 
 dev_dependencies:
   flutter_test:
@@ -82,6 +84,7 @@ flutter:
     - assets/custommap.json
     - assets/images/car.png
     - assets/Car_Models.csv
+    - assets/my_model.tflite
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
@@ -95,9 +98,9 @@ flutter:
   # list giving the asset and other descriptors for the font. For
   # example:
   fonts:
-     - family: Poppins
-       fonts:
-         - asset: assets/fonts/Poppins-Medium.ttf
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Medium.ttf
   #       - asset: fonts/Schyler-Italic.ttf
   #         style: italic
   #   - family: Trajan Pro

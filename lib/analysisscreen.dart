@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:csv/csv.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
+import 'package:tflite_flutter/tflite_flutter.dart';
 
 class CarModel {
   final String company;
@@ -24,10 +27,13 @@ class AnalysisPage extends StatefulWidget {
 
 class _AnalysisPageState extends State<AnalysisPage>
     with SingleTickerProviderStateMixin {
+  late Interpreter _interpreter;
+  final ImagePicker _imagePicker = ImagePicker();
   File? _image;
   late AnimationController _controller;
   late Animation<double> _animation;
   bool _showScanner = false;
+  img.Image? _pickedImage;
 
   List<CarModel> carModels = [];
   List<String> companies = [];
@@ -58,8 +64,19 @@ class _AnalysisPageState extends State<AnalysisPage>
         _controller.stop(); // Stop the animation controller
       });
     });
-
+    // Load the TensorFlow Lite model
+    _loadModel();
     loadCarModels();
+  }
+
+  void _loadModel() async {
+    // Load the model from the assets or external storage
+    final interpreterOptions = InterpreterOptions();
+    _interpreter = await Interpreter.fromAsset('assets/my_model.tflite',
+        options: interpreterOptions);
+
+    // Debugging: Print the input tensor shape
+    print('Input Tensor Shape: ${_interpreter.getInputTensor(0).shape}');
   }
 
   Future<void> loadCarModels() async {
@@ -124,21 +141,90 @@ class _AnalysisPageState extends State<AnalysisPage>
     }
   }
 
-  Future<void> _getImage(ImageSource source) async {
-    final picker = ImagePicker();
-    final pickedImage = await picker.pickImage(source: source);
+  // Future<void> _getImage(ImageSource source) async {
+  //   final picker = ImagePicker();
+  //   final pickedImage = await picker.pickImage(source: source);
 
-    setState(() {
-      if (pickedImage != null) {
-        _image = File(pickedImage.path);
+  //   setState(() {
+  //     if (pickedImage != null) {
+  //       _image = File(pickedImage.path);
+  //       _showScanner = true; // Show the scanner when an image is uploaded
+  //     }
+  //   });
+  // }
+
+  Future<void> _pickImage() async {
+    final pickedFile =
+        await _imagePicker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _image = File(pickedFile.path);
         _showScanner = true; // Show the scanner when an image is uploaded
-      }
-    });
+        _pickedImage =
+            img.decodeImage(Uint8List.fromList(_image!.readAsBytesSync()));
+      });
+      _classifyImage(pickedFile);
+    }
+  }
+
+  Future<String> runImageClassification() async {
+    if (_image == null) {
+      return 'No image selected';
+    }
+
+    // Preprocess the image
+    const inputSize = 200; // Adjust this based on your model input size
+    final rawImage = await _image!.readAsBytes();
+    final inputImage = img.decodeImage(Uint8List.fromList(rawImage))!;
+
+    // Resize the image to the desired input size
+    final resizedImage =
+        img.copyResize(inputImage, width: inputSize, height: inputSize);
+    final normalizedImage = resizedImage.getBytes();
+
+    // Ensure the input tensor shape matches the model expectations
+    const batchSize = 1;
+    const inputChannels = 3; // Assuming RGB images, adjust if necessary
+    final inputImageData =
+        Float32List(batchSize * inputSize * inputSize * inputChannels);
+
+    for (var i = 0; i < inputSize * inputSize; i++) {
+      inputImageData[i * 3 + 0] = normalizedImage[i * 3] / 255.0;
+      inputImageData[i * 3 + 1] = normalizedImage[i * 3 + 1] / 255.0;
+      inputImageData[i * 3 + 2] = normalizedImage[i * 3 + 2] / 255.0;
+    }
+
+    // Debugging: Print the input tensor shape
+    print('Input Tensor Shape: ${_interpreter.getInputTensor(0).shape}');
+
+    // Run inference
+    final output =
+        Float32List(4); // Assuming 4 classes, change it based on your model
+
+    try {
+      _interpreter.run(
+          inputImageData.buffer.asUint8List(), output.buffer.asUint8List());
+    } catch (e) {
+      print("Error running inference: $e");
+      return 'Error running inference';
+    }
+
+    // Display the result
+    final result = output.indexOf(output.reduce((a, b) => a > b ? a : b));
+    if (result == 0) {
+      return 'Road is full of holes';
+    } else if (result == 1) {
+      return 'Road is Muddy';
+    } else if (result == 2) {
+      return 'Road is Smooth';
+    } else {
+      return 'Road is covered with Snow';
+    }
   }
 
   void _clearImage() {
     setState(() {
-      _image = null;
+      _pickedImage = null;
       _showScanner = false;
     });
   }
@@ -193,7 +279,7 @@ class _AnalysisPageState extends State<AnalysisPage>
                   height: 20,
                 ),
                 GestureDetector(
-                  onTap: () => _getImage(ImageSource.gallery),
+                  onTap: () => _pickImage(),
                   child: Container(
                     height: 350.0,
                     width: 350.0,
@@ -206,7 +292,7 @@ class _AnalysisPageState extends State<AnalysisPage>
                     ),
                     child: Stack(
                       children: [
-                        _image != null
+                        _pickedImage != null
                             ? ColorFiltered(
                                 colorFilter: ColorFilter.mode(
                                   const Color(0xFF1C1F24).withOpacity(0.7),
@@ -214,8 +300,9 @@ class _AnalysisPageState extends State<AnalysisPage>
                                 ),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(30.0),
-                                  child: Image.file(
-                                    _image!,
+                                  child: Image.memory(
+                                    Uint8List.fromList(
+                                        img.encodeJpg(_pickedImage!)),
                                     height: double.infinity,
                                     width: double.infinity,
                                     fit: BoxFit.cover,
@@ -262,7 +349,7 @@ class _AnalysisPageState extends State<AnalysisPage>
                               );
                             },
                           ),
-                        if (_image != null)
+                        if (_pickedImage != null)
                           Positioned(
                             top: 10,
                             right: 10,
@@ -483,9 +570,10 @@ class _AnalysisPageState extends State<AnalysisPage>
                       foregroundColor: Colors.white,
                       backgroundColor: Colors.green,
                     ),
-                    onPressed: () {
+                    onPressed: () async {
                       // Show the result dialog when the button is pressed
-                      _showResultDialog();
+                      String resultText = await runImageClassification();
+                      _showResultDialog(resultText);
                     },
                     child: const Text(
                       'Generate Result',
@@ -507,7 +595,58 @@ class _AnalysisPageState extends State<AnalysisPage>
   @override
   void dispose() {
     _controller.dispose();
+    _interpreter.close();
     super.dispose();
+  }
+
+  Future<void> _classifyImage(XFile image) async {
+    // Preprocess the image
+    const inputSize = 200; // Adjust this based on your model input size
+    final rawImage = await image.readAsBytes();
+    final inputImage = img.decodeImage(Uint8List.fromList(rawImage))!;
+
+    // Resize the image to the desired input size
+    final resizedImage =
+        img.copyResize(inputImage, width: inputSize, height: inputSize);
+    final normalizedImage = resizedImage.getBytes();
+
+    // Ensure the input tensor shape matches the model expectations
+    const batchSize = 1;
+    const inputChannels = 3; // Assuming RGB images, adjust if necessary
+    final inputImageData =
+        Float32List(batchSize * inputSize * inputSize * inputChannels);
+
+    for (var i = 0; i < inputSize * inputSize; i++) {
+      inputImageData[i * 3 + 0] = normalizedImage[i * 3] / 255.0;
+      inputImageData[i * 3 + 1] = normalizedImage[i * 3 + 1] / 255.0;
+      inputImageData[i * 3 + 2] = normalizedImage[i * 3 + 2] / 255.0;
+    }
+
+    // Debugging: Print the input tensor shape
+    print('Input Tensor Shape: ${_interpreter.getInputTensor(0).shape}');
+
+    // Run inference
+    final output =
+        Float32List(4); // Assuming 4 classes, change it based on your model
+
+    try {
+      _interpreter.run(
+          inputImageData.buffer.asUint8List(), output.buffer.asUint8List());
+    } catch (e) {
+      print("Error running inference: $e");
+    }
+
+    // Display the result
+    final result = output.indexOf(output.reduce((a, b) => a > b ? a : b));
+    if (result == 0) {
+      print('Road is full of holes');
+    } else if (result == 1) {
+      print('Road is Muddy');
+    } else if (result == 2) {
+      print('Road is Smooth');
+    } else {
+      print('Road is covered with Snow');
+    }
   }
 
   void updateModelsList() {
@@ -525,7 +664,7 @@ class _AnalysisPageState extends State<AnalysisPage>
     });
   }
 
-  void _showResultDialog() {
+  void _showResultDialog(String resultText) {
     // Show the processing animation for 5 seconds
     showDialog(
       context: context,
@@ -607,10 +746,10 @@ class _AnalysisPageState extends State<AnalysisPage>
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'A Muddy Road:      ',
+                Text(
+                  'Result: $resultText',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 20,
                     fontFamily: 'Poppins',

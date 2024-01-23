@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:test_try/analysisscreen.dart';
 import 'package:test_try/cars.dart';
+import 'package:test_try/image_recog.dart';
 import 'package:test_try/signin.dart';
 
 class CustomDrawer extends StatelessWidget {
@@ -132,7 +133,7 @@ class CustomDrawer extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const CarPage()),
+                  MaterialPageRoute(builder: (context) => const MyHomePage()),
                 );
               },
             ),
