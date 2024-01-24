@@ -537,17 +537,21 @@ class _AnalysisPageState extends State<AnalysisPage>
                   items: engineTypes.map((String value) {
                     return DropdownMenuItem<String>(
                       value: value,
-                      child: Text(
-                        value,
-                        style: TextStyle(
-                          color: selectedEngineType == value
-                              ? Colors.grey
-                              : Colors.black,
-                          fontSize: 15,
-                          fontFamily: 'Poppins',
-                          fontWeight: selectedEngineType == value
-                              ? FontWeight.normal
-                              : FontWeight.normal,
+                      child: SizedBox(
+                        width: 200,
+                        child: Text(
+                          value,
+                          style: TextStyle(
+                            color: selectedEngineType == value
+                                ? Colors.grey
+                                : Colors.black,
+                            fontSize: 15,
+                            fontFamily: 'Poppins',
+                            fontWeight: selectedEngineType == value
+                                ? FontWeight.normal
+                                : FontWeight.normal,
+                          ),
+                          maxLines: 1,
                         ),
                       ),
                     );

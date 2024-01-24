@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'
     show ByteData, Clipboard, ClipboardData, Uint8List, rootBundle;
 import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
 import 'package:location/location.dart' as location;
 import 'package:sliding_up_panel/sliding_up_panel.dart';
 import 'package:test_try/drawer.dart';
@@ -113,6 +116,187 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  void _findNearbyRestaurants() async {
+    if (currentLocation == null) {
+      print('Error: Current location is null');
+      return;
+    }
+
+    const apiKey =
+        'AIzaSyDmMzGmGbjESph5OSbXVTktwB3OkVd6W18'; // Replace with your API key
+    const radius = 2000; // 2km
+    const type = 'restaurant';
+    final location =
+        '${currentLocation!.latitude},${currentLocation!.longitude}';
+    final url =
+        'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=$location&radius=$radius&type=$type&key=$apiKey';
+
+    try {
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        if (data['status'] == 'OK') {
+          final results = data['results'] as List<dynamic>;
+
+          for (final result in results) {
+            final name = result['name'] as String;
+            final placeId = result['place_id'] as String;
+            final vicinity = result['vicinity'] as String;
+            final lat = result['geometry']['location']['lat'] as double;
+            final lng = result['geometry']['location']['lng'] as double;
+
+            // Create a marker for each restaurant
+            final restaurantMarker = Marker(
+              markerId: MarkerId(placeId),
+              position: LatLng(lat, lng),
+              icon: BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueRed),
+              infoWindow: InfoWindow(
+                title: name,
+                snippet: vicinity,
+              ),
+            );
+
+            // Add the marker to the set of markers
+            markers.add(restaurantMarker);
+          }
+
+          // Update the state to trigger a rebuild
+          setState(() {});
+        } else {
+          print('Error: ${data['status']} - ${data['error_message']}');
+        }
+      } else {
+        print('Error: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching nearby restaurants: $e');
+    }
+  }
+
+  void _findNearbyGarages() async {
+    if (currentLocation == null) {
+      print('Error: Current location is null');
+      return;
+    }
+
+    const apiKey =
+        'AIzaSyDmMzGmGbjESph5OSbXVTktwB3OkVd6W18'; // Replace with your API key
+    const radius = 2000; // 2km
+    const type =
+        'car_repair'; // Change type to 'car_repair' for garages or 'mechanic' for mechanics
+    final location =
+        '${currentLocation!.latitude},${currentLocation!.longitude}';
+    final url =
+        'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=$location&radius=$radius&type=$type&key=$apiKey';
+
+    try {
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        if (data['status'] == 'OK') {
+          final results = data['results'] as List<dynamic>;
+
+          for (final result in results) {
+            final name = result['name'] as String;
+            final placeId = result['place_id'] as String;
+            final vicinity = result['vicinity'] as String;
+            final lat = result['geometry']['location']['lat'] as double;
+            final lng = result['geometry']['location']['lng'] as double;
+
+            // Create a marker for each garage/mechanic
+            final garageMarker = Marker(
+              markerId: MarkerId(placeId),
+              position: LatLng(lat, lng),
+              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor
+                  .hueBlue), // Customize the icon color as needed
+              infoWindow: InfoWindow(
+                title: name,
+                snippet: vicinity,
+              ),
+            );
+
+            // Add the marker to the set of markers
+            markers.add(garageMarker);
+          }
+
+          // Update the state to trigger a rebuild
+          setState(() {});
+        } else {
+          print('Error: ${data['status']} - ${data['error_message']}');
+        }
+      } else {
+        print('Error: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching nearby garages: $e');
+    }
+  }
+
+  void _findNearbyHospitals() async {
+    if (currentLocation == null) {
+      print('Error: Current location is null');
+      return;
+    }
+
+    const apiKey =
+        'AIzaSyDmMzGmGbjESph5OSbXVTktwB3OkVd6W18'; // Replace with your API key
+    const radius = 2000; // 2km
+    const type = 'hospital'; // Change type to 'hospital' for nearby hospitals
+    final location =
+        '${currentLocation!.latitude},${currentLocation!.longitude}';
+    final url =
+        'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=$location&radius=$radius&type=$type&key=$apiKey';
+
+    try {
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        if (data['status'] == 'OK') {
+          final results = data['results'] as List<dynamic>;
+
+          for (final result in results) {
+            final name = result['name'] as String;
+            final placeId = result['place_id'] as String;
+            final vicinity = result['vicinity'] as String;
+            final lat = result['geometry']['location']['lat'] as double;
+            final lng = result['geometry']['location']['lng'] as double;
+
+            // Create a marker for each hospital
+            final hospitalMarker = Marker(
+              markerId: MarkerId(placeId),
+              position: LatLng(lat, lng),
+              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor
+                  .hueGreen), // Customize the icon color as needed
+              infoWindow: InfoWindow(
+                title: name,
+                snippet: vicinity,
+              ),
+            );
+
+            // Add the marker to the set of markers
+            markers.add(hospitalMarker);
+          }
+
+          // Update the state to trigger a rebuild
+          setState(() {});
+        } else {
+          print('Error: ${data['status']} - ${data['error_message']}');
+        }
+      } else {
+        print('Error: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching nearby hospitals: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -204,6 +388,14 @@ class _MapScreenState extends State<MapScreen> {
   // Widget _buildDrawer() {
 
   // }
+  void _clearMarkers() {
+    // Create a new set with only the car image marker
+    markers = <Marker>{carMarker!};
+    polylines.clear();
+
+    // Update the state to trigger a rebuild
+    setState(() {});
+  }
 
   Widget _buildPanel() {
     return ClipRRect(
@@ -250,20 +442,30 @@ class _MapScreenState extends State<MapScreen> {
                         _buildSquareButton(
                           '  Find\nGarage',
                           Icons.garage,
-                          () {},
+                          () {
+                            _findNearbyGarages();
+                          },
                         ),
                         _buildSquareButton(
                           '      Find\nRestaurant',
                           Icons.restaurant,
-                          () {},
+                          () {
+                            _findNearbyRestaurants();
+                          },
                         ),
                         _buildSquareButton(
                           '   Find\nMedical',
                           Icons.local_hospital,
-                          () {},
+                          () {
+                            _findNearbyHospitals();
+                          },
                         ),
                       ],
                     ),
+                    const SizedBox(height: 20),
+                    _buildGreenButton('Clear Location', () {
+                      _clearMarkers();
+                    }),
                   ],
                 ),
               ),
